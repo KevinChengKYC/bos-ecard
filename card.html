@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>博斯電子名片</title>
+<style>
+  :root {
+    --bos-blue: #0068B7;
+    --bos-deep: #021a33;
+    --ink: #ffffff;
+    --ink-soft: rgba(255,255,255,.72);
+    --line: rgba(255,255,255,.16);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bos-deep);
+    color: var(--ink);
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh; padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 名片本體：直式 9:16 手機比例 */
+  .card {
+    position: relative; overflow: hidden;
+    width: min(100%, 380px); aspect-ratio: 9 / 15;
+    border-radius: 22px;
+    background: radial-gradient(120% 90% at 85% 0%, #0a5aa3 0%, #04305e 45%, var(--bos-deep) 100%);
+    isolation: isolate;
+  }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+
+  .content {
+    position: relative; height: 100%;
+    display: flex; flex-direction: column;
+    padding: 32px 28px 26px;
+  }
+  .logo { width: 132px; height: auto; display: block; }
+
+  .identity { margin-top: auto; }
+  .dept {
+    font-size: 13px; letter-spacing: .18em; color: var(--ink-soft);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .dept::before { content: ""; width: 22px; height: 2px; background: #5fb8ff; }
+  .title { font-size: 15px; margin-top: 10px; letter-spacing: .12em; color: var(--ink-soft); }
+  .name {
+    font-size: 44px; font-weight: 600; letter-spacing: .16em;
+    margin-top: 4px; line-height: 1.15;
+  }
+  .en { font-size: 12px; letter-spacing: .32em; color: rgba(255,255,255,.5); margin-top: 6px; }
+
+  .contacts { margin-top: 26px; border-top: 1px solid var(--line); }
+  .contacts a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+    color: var(--ink); text-decoration: none; font-size: 14px; letter-spacing: .04em;
+  }
+  .contacts svg { width: 16px; height: 16px; flex: none; stroke: #8fd0ff; fill: none; stroke-width: 1.6; }
+  .contacts span.k { color: var(--ink-soft); font-size: 12px; width: 34px; flex: none; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .btn {
+    appearance: none; border: 0; cursor: pointer;
+    height: 44px; border-radius: 999px; font: inherit; font-size: 14px; letter-spacing: .08em;
+    display: flex; align-items: center; justify-content: center; text-decoration: none;
+  }
+  .btn.primary { background: #fff; color: var(--bos-blue); font-weight: 600; }
+  .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); }
+
+  .foot { margin-top: 16px; font-size: 10.5px; letter-spacing: .1em; color: rgba(255,255,255,.42); text-align: center; }
+</style>
+</head>
+<body>
+
+<article class="card">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="content">
+    <img class="logo" src="assets/bos_white.png" alt="博斯 SPORTCAST">
+
+    <section class="identity">
+      <div class="dept" data-f="dept"></div>
+      <div class="title" data-f="title"></div>
+      <h1 class="name" data-f="name"></h1>
+      <div class="en" data-f="en">SPORTCAST · CSTV</div>
+
+      <nav class="contacts">
+        <a data-href="tel" href="#">
+          <svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>
+          <span class="k">手機</span><span data-f="tel"></span>
+        </a>
+        <a data-href="mail" href="#">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="k">信箱</span><span data-f="mail"></span>
+        </a>
+      </nav>
+
+      <div class="actions">
+        <button class="btn primary" id="share">用 LINE 分享</button>
+        <a class="btn ghost" id="vcf" href="#">加入通訊錄</a>
+      </div>
+    </section>
+
+    <div class="foot">華衛集團 · 博斯運動事業股份有限公司</div>
+  </div>
+</article>
+
+<script src="config.js"></script>
+<script>
+/* ---------- 依 ?u=代號 向 Apps Script 查名單（不接受網址直接帶個資，避免偽造） ---------- */
+const id = new URLSearchParams(location.search).get('u');
+const card = document.querySelector('.card');
+card.style.visibility = 'hidden';
+const telFmt = t => t.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1-$2-$3');
+
+(async () => {
+  let m = null;
+  try { if (id) m = await (await fetch(`${ECARD.API}?u=${encodeURIComponent(id)}`)).json(); } catch (e) {}
+  if (!m || m.error) {
+    document.querySelector('.identity').innerHTML = '<p style="color:var(--ink-soft);line-height:1.8">查無此名片，<br>或名片已停用。</p>';
+    card.style.visibility = 'visible';
+    return;
+  }
+  document.title = `${m.name}｜${m.dept} ${m.title}`;
+  ['name', 'title', 'dept'].forEach(k => document.querySelector(`[data-f="${k}"]`).textContent = m[k]);
+  const telA = document.querySelector('[data-href="tel"]'), mailA = document.querySelector('[data-href="mail"]');
+  if (m.tel) { document.querySelector('[data-f="tel"]').textContent = telFmt(m.tel); telA.href = 'tel:' + m.tel; } else telA.remove();
+  if (m.mail) { document.querySelector('[data-f="mail"]').textContent = m.mail; mailA.href = 'mailto:' + m.mail; } else mailA.remove();
+  document.getElementById('vcf').href = `${ECARD.API}?u=${encodeURIComponent(m.id)}&vcf=1`;
+  document.getElementById('share').addEventListener('click', () => {
+    location.href = `https://liff.line.me/${ECARD.LIFF_ID}?u=${encodeURIComponent(m.id)}`;
+  });
+  card.style.visibility = 'visible';
+})();
+
+/* ---------- 背景：動態抽象流線（呼應博斯 logo 弧線） ---------- */
+(() => {
+  const cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w, h, dpr;
+  const resize = () => {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    w = cv.clientWidth; h = cv.clientHeight;
+    cv.width = w * dpr; cv.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  resize(); addEventListener('resize', resize);
+
+  const N = 26;
+  const draw = t => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < N; i++) {
+      const p = i / N;
+      const amp = h * (0.06 + 0.10 * p);
+      const yBase = h * (0.12 + 0.55 * p);
+      const ph = t * 0.00025 * (0.6 + p) + i * 0.35;
+      ctx.beginPath();
+      for (let x = -20; x <= w + 20; x += 8) {
+        const u = x / w;
+        const y = yBase
+          + Math.sin(u * 2.4 + ph) * amp
+          + Math.sin(u * 5.1 - ph * 1.3) * amp * 0.25
+          - u * h * 0.18;               // 由左下往右上斜升
+        x === -20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      const a = 0.05 + 0.13 * Math.sin(p * Math.PI);
+      ctx.strokeStyle = i % 5 === 0 ? `rgba(120,210,255,${a + .08})` : `rgba(40,140,230,${a})`;
+      ctx.lineWidth = i % 5 === 0 ? 1.4 : 0.8;
+      ctx.stroke();
+    }
+    // 緩慢漂移的光暈
+    const gx = w * (0.7 + 0.15 * Math.sin(t * 0.0002)), gy = h * (0.3 + 0.1 * Math.cos(t * 0.00017));
+    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, w * 0.8);
+    g.addColorStop(0, 'rgba(0,104,183,.35)'); g.addColorStop(1, 'rgba(0,104,183,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+    // 底部漸暗，確保文字可讀
+    const b = ctx.createLinearGradient(0, h * 0.45, 0, h);
+    b.addColorStop(0, 'rgba(2,26,51,0)'); b.addColorStop(1, 'rgba(2,26,51,.85)');
+    ctx.fillStyle = b; ctx.fillRect(0, 0, w, h);
+    if (!still) requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

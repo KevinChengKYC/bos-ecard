@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>傳送電子名片</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 24px 16px; text-align: center;
+    background: #021a33; color: #fff;
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  }
+  img { width: 120px; }
+  #msg { font-size: 15px; line-height: 1.8; color: rgba(255,255,255,.8); letter-spacing: .06em; }
+  button {
+    appearance: none; border: 0; height: 46px; padding: 0 32px; border-radius: 999px;
+    background: #fff; color: #0068B7; font: inherit; font-weight: 600; letter-spacing: .08em; cursor: pointer;
+  }
+  button[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <img src="assets/bos_white.png" alt="博斯 SPORTCAST">
+  <p id="msg">載入中…</p>
+  <button id="again" hidden>選擇要傳送的對象</button>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+<script>
+const msg = document.getElementById('msg'), again = document.getElementById('again');
+let flex = null;
+
+async function pick() {
+  try {
+    const res = await liff.shareTargetPicker([flex]);
+    if (res) {
+      msg.textContent = '名片已送出 ✓';
+      setTimeout(() => liff.closeWindow(), 1200);
+    } else {
+      msg.textContent = '已取消傳送';
+      again.hidden = false;
+    }
+  } catch (e) {
+    msg.textContent = '傳送失敗：' + (e.message || e);
+    again.hidden = false;
+  }
+}
+
+(async () => {
+  try {
+    await liff.init({ liffId: ECARD.LIFF_ID });
+    if (!liff.isLoggedIn()) return liff.login({ redirectUri: location.href });
+
+    const id = new URLSearchParams(location.search).get('u');   // liff.init 之後才讀得到
+    flex = id && await (await fetch(`${ECARD.API}?u=${encodeURIComponent(id)}&flex=1`)).json();
+    if (!flex || flex.error) { msg.textContent = '查無此名片'; return; }
+
+    if (!liff.isApiAvailable('shareTargetPicker')) {
+      msg.textContent = '此環境不支援傳送，請在手機 LINE 內開啟';
+      return;
+    }
+    msg.textContent = '請選擇要傳送名片的好友或群組';
+    again.hidden = false;
+    pick();
+  } catch (e) {
+    msg.textContent = '初始化失敗：' + (e.message || e);
+  }
+})();
+
+again.addEventListener('click', () => { again.hidden = true; pick(); });
+</script>
+</body>
+</html>
