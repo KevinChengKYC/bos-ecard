@@ -62,7 +62,7 @@
   .contacts svg { width: 16px; height: 16px; flex: none; stroke: #8fd0ff; fill: none; stroke-width: 1.6; }
   .contacts span.k { color: var(--ink-soft); font-size: 12px; width: 34px; flex: none; }
 
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
   .btn {
     appearance: none; border: 0; cursor: pointer;
     height: 44px; border-radius: 999px; font: inherit; font-size: 14px; letter-spacing: .08em;
@@ -100,11 +100,10 @@
 
       <div class="actions">
         <button class="btn primary" id="share">用 LINE 分享</button>
-        <a class="btn ghost" id="vcf" href="#">加入通訊錄</a>
       </div>
     </section>
 
-    <div class="foot">華衛集團 · 博斯運動事業股份有限公司</div>
+    <div class="foot">CSTV華衛集團</div>
   </div>
 </article>
 
@@ -129,7 +128,6 @@ const telFmt = t => t.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1-$2-$3');
   const telA = document.querySelector('[data-href="tel"]'), mailA = document.querySelector('[data-href="mail"]');
   if (m.tel) { document.querySelector('[data-f="tel"]').textContent = telFmt(m.tel); telA.href = 'tel:' + m.tel; } else telA.remove();
   if (m.mail) { document.querySelector('[data-f="mail"]').textContent = m.mail; mailA.href = 'mailto:' + m.mail; } else mailA.remove();
-  document.getElementById('vcf').href = `${ECARD.API}?u=${encodeURIComponent(m.id)}&vcf=1`;
   document.getElementById('share').addEventListener('click', () => {
     location.href = `https://liff.line.me/${ECARD.LIFF_ID}?u=${encodeURIComponent(m.id)}`;
   });
